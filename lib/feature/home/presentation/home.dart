@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:todo/layers/domain/task.dart';
-import 'package:todo/layers/data/task_repository.dart';
+import 'package:todo/feature/home/data/task_repository.dart';
+import 'package:todo/feature/home/domain/task.dart';
+import 'package:todo/utils/extensions/date_time.dart';
 
 class Home extends StatelessWidget {
   const Home({super.key});
@@ -33,10 +34,48 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  List<Task> taskList = TaskRepository().getTasks();
+  final TaskRepository _taskRepository = TaskRepository();
+  List<Task> _tasks = [];
+  int _counter = 1;
 
-  void _addTask() {
-    setState(() {});
+  @override
+  void initState() {
+    _loadTasks();
+    super.initState();
+  }
+
+  Future<void> _loadTasks() async {
+    List<Task> tasks = await _taskRepository.getAllTasks();
+    setState(() {
+      _tasks = tasks;
+    });
+  }
+
+  void _addTask() async {
+    Task newTask = Task(
+        id: DateTime.now().millisecondsSinceEpoch,
+        category: 'Category $_counter',
+        name: 'Name ${_counter++}',
+        time: DateTime.now(),
+        isComplete: false);
+    await _taskRepository.addTask(newTask);
+    _loadTasks();
+  }
+
+  void _removeTask(Task task) async {
+    await _taskRepository.removeTask(task);
+    _loadTasks();
+  }
+
+  void _markTaskAsComplete(Task task) async {
+    Task updatedTask = Task(
+        id: task.id,
+        category: task.category,
+        name: task.name,
+        time: task.time,
+        isComplete: true);
+    await _taskRepository.updateTask(updatedTask);
+    _loadTasks();
   }
 
   @override
@@ -50,9 +89,16 @@ class _MyHomePageState extends State<MyHomePage> {
       body: Padding(
         padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
         child: ListView.builder(
-          itemCount: taskList.length,
+          itemCount: _tasks.length,
           itemBuilder: (context, index) {
-            return TaskCardWidget(task: taskList[index]);
+            return TaskCardWidget(
+                task: _tasks[index],
+                onCompletePressed: () {
+                  _markTaskAsComplete(_tasks[index]);
+                },
+                onDeletePressed: () {
+                  _removeTask(_tasks[index]);
+                });
           },
           clipBehavior: Clip.none,
         ),
@@ -61,7 +107,9 @@ class _MyHomePageState extends State<MyHomePage> {
         padding: const EdgeInsets.only(right: 8.0, bottom: 16.0),
         child: FloatingActionButton(
           backgroundColor: Colors.deepPurpleAccent,
-          onPressed: () {},
+          onPressed: () {
+            _addTask();
+          },
           tooltip: 'Increment',
           child: const Icon(
             Icons.add,
@@ -75,9 +123,14 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class TaskCardWidget extends StatelessWidget {
   final Task task;
+  final VoidCallback onCompletePressed;
+  final VoidCallback onDeletePressed;
 
-  const TaskCardWidget({super.key, required this.task});
-
+  const TaskCardWidget(
+      {super.key,
+      required this.task,
+      required this.onCompletePressed,
+      required this.onDeletePressed});
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +159,7 @@ class TaskCardWidget extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                   Text(
+                  Text(
                     task.name,
                     style: const TextStyle(
                       fontSize: 18,
@@ -114,7 +167,7 @@ class TaskCardWidget extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                   Row(
+                  Row(
                     children: [
                       const Icon(
                         Icons.access_time,
@@ -123,7 +176,7 @@ class TaskCardWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        task.getTime(),
+                        task.time.formatTime(),
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.deepPurpleAccent,
@@ -134,37 +187,38 @@ class TaskCardWidget extends StatelessWidget {
                 ],
               ),
               Column(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.pinkAccent.shade100,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(
-                      Icons.work_outline,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      const Text(
-                        'Done',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.deepPurpleAccent,
+                      Visibility(
+                        visible: task.isComplete,
+                        child: const Text(
+                          'Completed',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.deepPurpleAccent,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 8),
-                      Checkbox(
-                        value: true,
-                        onChanged: (value) {},
+                      Visibility(
+                        visible: !task.isComplete,
+                        child: IconButton(
+                          icon: const Icon(Icons.check, size: 32),
+                          color: Colors.deepPurpleAccent,
+                          onPressed: onCompletePressed,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.delete, size: 32),
+                        color: Colors.red,
+                        onPressed: onDeletePressed,
                       ),
                     ],
-                  ),
+                  )
                 ],
               ),
             ],
