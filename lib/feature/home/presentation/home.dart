@@ -1,39 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:todo/feature/home/data/task_repository.dart';
 import 'package:todo/feature/home/domain/task.dart';
+import 'package:todo/feature/task_details/presentation/task_details.dart';
 import 'package:todo/utils/extensions/date_time.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   const Home({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TODO List',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-            inversePrimary: Colors.deepPurpleAccent,
-            seedColor: Colors.deepPurple),
-        appBarTheme: const AppBarTheme(
-            titleTextStyle: TextStyle(color: Colors.white, fontSize: 21.0),
-            centerTitle: true),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Home'),
-    );
-  }
+  State<Home> createState() => _HomeState();
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
+class _HomeState extends State<Home> {
   final TaskRepository _taskRepository = TaskRepository();
   List<Task> _tasks = [];
   int _counter = 1;
@@ -67,6 +45,56 @@ class _MyHomePageState extends State<MyHomePage> {
     _loadTasks();
   }
 
+  void _onItemPressed(Task task) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => TaskDetails(
+          task: task,
+          onCompletePressed: () {
+            _markTaskAsComplete(task);
+            Navigator.pop(context); // Return to the HomeScreen
+          },
+          onEditPressed: () => _onEditPressed(task),
+          onDeletePressed: () {
+            _removeTask(task);
+            Navigator.pop(context); // Return to the HomeScreen
+          },
+        ),
+        transitionDuration: Duration.zero, // No animation duration
+        reverseTransitionDuration: Duration.zero, // No reverse animation
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return child; // No transition animation
+        },
+      ),
+    );
+  }
+
+  void _onEditPressed(Task task) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => TaskDetails(
+          task: task,
+          onCompletePressed: () {
+            _markTaskAsComplete(task);
+            Navigator.pop(context); // Return to the HomeScreen
+          },
+          onEditPressed: () => _onEditPressed(task),
+          onDeletePressed: () {
+            _removeTask(task);
+            Navigator.pop(context); // Return to the HomeScreen
+          },
+        ),
+        transitionDuration: Duration.zero, // No animation duration
+        reverseTransitionDuration: Duration.zero, // No reverse animation
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return child; // No transition animation
+        },
+      ),
+    );
+  }
+
   void _markTaskAsComplete(Task task) async {
     Task updatedTask = Task(
         id: task.id,
@@ -83,25 +111,33 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: const Text('Home'),
       ),
       backgroundColor: Colors.cyanAccent[100],
       body: Padding(
-        padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-        child: ListView.builder(
-          itemCount: _tasks.length,
-          itemBuilder: (context, index) {
-            return TaskCardWidget(
-                task: _tasks[index],
-                onCompletePressed: () {
-                  _markTaskAsComplete(_tasks[index]);
+        padding: const EdgeInsets.only(
+            left: 16.0, right: 16.0, top: 8.0, bottom: 16.0),
+        child: _tasks.isEmpty
+            ? const Center(
+                child: Text(
+                  'You have no tasks today, press \nadd button to add one',
+                  style: TextStyle(fontSize: 18.0, color: Colors.black),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            : ListView.builder(
+                itemCount: _tasks.length,
+                itemBuilder: (context, index) {
+                  return TaskCardWidget(
+                      task: _tasks[index],
+                      onItemPressed: () => _onItemPressed(_tasks[index]),
+                      onCompletePressed: () =>
+                          _markTaskAsComplete(_tasks[index]),
+                      onEditPressed: () => _onEditPressed(_tasks[index]),
+                      onDeletePressed: () => _removeTask(_tasks[index]));
                 },
-                onDeletePressed: () {
-                  _removeTask(_tasks[index]);
-                });
-          },
-          clipBehavior: Clip.none,
-        ),
+                clipBehavior: Clip.none,
+              ),
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(right: 8.0, bottom: 16.0),
@@ -123,105 +159,115 @@ class _MyHomePageState extends State<MyHomePage> {
 
 class TaskCardWidget extends StatelessWidget {
   final Task task;
+  final VoidCallback onItemPressed;
   final VoidCallback onCompletePressed;
+  final VoidCallback onEditPressed;
   final VoidCallback onDeletePressed;
 
   const TaskCardWidget(
       {super.key,
       required this.task,
+      required this.onItemPressed,
       required this.onCompletePressed,
+      required this.onEditPressed,
       required this.onDeletePressed});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 8.0),
-      child: Card(
-        elevation: 0,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.category,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    task.name,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.access_time,
-                        color: Colors.deepPurpleAccent,
-                        size: 18,
+    return GestureDetector(
+      onTap: onItemPressed,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 8.0),
+        child: Card(
+          elevation: 0,
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      task.category,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        task.time.formatTime(),
-                        style: const TextStyle(
-                          fontSize: 14,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      task.name,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.access_time,
                           color: Colors.deepPurpleAccent,
+                          size: 18,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Column(
-                mainAxisSize: MainAxisSize.max,
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      Visibility(
-                        visible: task.isComplete,
-                        child: const Text(
-                          'Completed',
-                          style: TextStyle(
+                        const SizedBox(width: 4),
+                        Text(
+                          task.time.formatTime(),
+                          style: const TextStyle(
                             fontSize: 14,
                             color: Colors.deepPurpleAccent,
                           ),
                         ),
-                      ),
-                      Visibility(
-                        visible: !task.isComplete,
-                        child: IconButton(
-                          icon: const Icon(Icons.check, size: 32),
+                      ],
+                    ),
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        task.isComplete
+                            ? const Padding(
+                                padding: EdgeInsets.only(right: 8.0),
+                                child: Text(
+                                  'Completed',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.deepPurpleAccent,
+                                  ),
+                                ),
+                              )
+                            : IconButton(
+                                icon: const Icon(Icons.check, size: 32),
+                                color: Colors.deepPurpleAccent,
+                                onPressed: onCompletePressed,
+                              ),
+                        IconButton(
+                          icon: const Icon(Icons.edit, size: 32),
                           color: Colors.deepPurpleAccent,
-                          onPressed: onCompletePressed,
+                          onPressed: onEditPressed,
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete, size: 32),
-                        color: Colors.red,
-                        onPressed: onDeletePressed,
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ],
+                        IconButton(
+                          icon: const Icon(Icons.delete, size: 32),
+                          color: Colors.red,
+                          onPressed: onDeletePressed,
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
