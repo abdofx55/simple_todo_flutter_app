@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:todo/feature/add_task/add_task.dart';
+import 'package:todo/feature/edit_task/edit_task.dart';
 import 'package:todo/feature/home/data/task_repository.dart';
 import 'package:todo/feature/home/domain/task.dart';
 import 'package:todo/feature/task_details/presentation/task_details.dart';
@@ -14,7 +16,6 @@ class Home extends StatefulWidget {
 class _HomeState extends State<Home> {
   final TaskRepository _taskRepository = TaskRepository();
   List<Task> _tasks = [];
-  int _counter = 1;
 
   @override
   void initState() {
@@ -29,14 +30,19 @@ class _HomeState extends State<Home> {
     });
   }
 
-  void _addTask() async {
-    Task newTask = Task(
-        id: DateTime.now().millisecondsSinceEpoch,
-        category: 'Category $_counter',
-        name: 'Name ${_counter++}',
-        time: DateTime.now(),
-        isComplete: false);
-    await _taskRepository.addTask(newTask);
+  void _addTask(Task task) async {
+    await _taskRepository.addTask(task);
+    _loadTasks();
+  }
+
+  void _updateTask(Task task) async {
+    Task updatedTask = Task(
+        id: task.id,
+        category: task.category,
+        name: task.name,
+        time: task.time,
+        isComplete: task.isComplete);
+    await _taskRepository.updateTask(updatedTask);
     _loadTasks();
   }
 
@@ -52,7 +58,8 @@ class _HomeState extends State<Home> {
         pageBuilder: (context, animation, secondaryAnimation) => TaskDetails(
           task: task,
           onCompletePressed: () {
-            _markTaskAsComplete(task);
+            task.markAsComplete();
+            _updateTask(task);
             Navigator.pop(context); // Return to the HomeScreen
           },
           onEditPressed: () => _onEditPressed(task),
@@ -74,17 +81,11 @@ class _HomeState extends State<Home> {
     Navigator.push(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => TaskDetails(
-          task: task,
-          onCompletePressed: () {
-            _markTaskAsComplete(task);
-            Navigator.pop(context); // Return to the HomeScreen
-          },
-          onEditPressed: () => _onEditPressed(task),
-          onDeletePressed: () {
-            _removeTask(task);
-            Navigator.pop(context); // Return to the HomeScreen
-          },
+        pageBuilder: (context, animation, secondaryAnimation) => EditTask(
+          initialTask: task,
+          onEditTask: (task) {
+            _updateTask(task);
+          }
         ),
         transitionDuration: Duration.zero, // No animation duration
         reverseTransitionDuration: Duration.zero, // No reverse animation
@@ -95,15 +96,22 @@ class _HomeState extends State<Home> {
     );
   }
 
-  void _markTaskAsComplete(Task task) async {
-    Task updatedTask = Task(
-        id: task.id,
-        category: task.category,
-        name: task.name,
-        time: task.time,
-        isComplete: true);
-    await _taskRepository.updateTask(updatedTask);
-    _loadTasks();
+  void _navigateToAddTask() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => AddTask(
+            onAddTask: (task) {
+              _addTask(task);
+            }
+        ),
+        transitionDuration: Duration.zero, // No animation duration
+        reverseTransitionDuration: Duration.zero, // No reverse animation
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return child; // No transition animation
+        },
+      ),
+    );
   }
 
   @override
@@ -131,8 +139,11 @@ class _HomeState extends State<Home> {
                   return TaskCardWidget(
                       task: _tasks[index],
                       onItemPressed: () => _onItemPressed(_tasks[index]),
-                      onCompletePressed: () =>
-                          _markTaskAsComplete(_tasks[index]),
+                      onCompletePressed: () {
+                        Task task = _tasks[index];
+                        task.markAsComplete();
+                        _updateTask(task);
+                      },
                       onEditPressed: () => _onEditPressed(_tasks[index]),
                       onDeletePressed: () => _removeTask(_tasks[index]));
                 },
@@ -144,7 +155,7 @@ class _HomeState extends State<Home> {
         child: FloatingActionButton(
           backgroundColor: Colors.deepPurpleAccent,
           onPressed: () {
-            _addTask();
+            _navigateToAddTask();
           },
           tooltip: 'Increment',
           child: const Icon(
