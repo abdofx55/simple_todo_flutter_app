@@ -38,7 +38,7 @@ class TaskRepository {
     tasks.add(task);
 
     // Save updated list of tasks
-    await await prefs.setString(
+    await prefs.setString(
         _taskKey, jsonEncode(tasks.map((e) => e.toJson()).toList()));
   }
 
