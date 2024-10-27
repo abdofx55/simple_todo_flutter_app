@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:todo/feature/add_task/add_task.dart';
-import 'package:todo/feature/edit_task/edit_task.dart';
+import 'package:todo/feature/add_task/presentation/add_task.dart';
+import 'package:todo/feature/edit_task/presentation/edit_task.dart';
 import 'package:todo/feature/home/data/task_repository.dart';
 import 'package:todo/feature/home/domain/task.dart';
 import 'package:todo/feature/task_details/presentation/task_details.dart';
